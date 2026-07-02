@@ -1,1 +1,21 @@
-Nothing needs to be added to the .gitignore file since only a Python source file (quant_engine.py) was modified and no build artifacts, dependencies, or temporary files were detected in the changes.
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment Variables (NEVER commit API keys)
+.env
+
+# IDE files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Project specific temporary files
+sec-edgar-filings/
+*.csv
+__pycache__/
+*.pyc
