@@ -145,63 +145,137 @@ def main():
             st.subheader("🚀 High Upside / Turnaround Screener")
             st.markdown("Stocks mathematically far from their 52-week highs, filtered for recent news catalysts.")
             
+            # Helper function to get score emoji
+            def get_score_emoji(score, max_score):
+                if max_score == 0:
+                    return "⚪️"
+                pct = (score / max_score) * 100
+                if pct > 60:
+                    return "🟢"
+                elif pct >= 30:
+                    return "🟡"
+                else:
+                    return "🔴"
+            
             for stock in stock_data:
                 m = stock['metrics']
                 conf = stock['confidence']
                 
                 # Determine UI colors based on verdict
                 verdict = conf.get('verdict', 'Hold')
-                if 'Strong Buy' in verdict: color = "🟢"
-                elif 'Buy' in verdict: color = "🟢"
-                elif 'Sell' in verdict: color = ""
-                else: color = "⚪️"
-                    
+                if 'Strong Buy' in verdict:
+                    color = "🟢"
+                elif 'Buy' in verdict:
+                    color = "🟢"
+                elif 'Sell' in verdict:
+                    color = "🔴"
+                else:
+                    color = "⚪️"
+                
                 with st.container(border=True):
-                    # Header Row
-                    col_header1, col_header2 = st.columns([3, 1])
-                    with col_header1:
-                        st.markdown(f"### {color} ${m['symbol']} - {verdict}")
-                    with col_header2:
-                        score = conf.get('confidence_score', 0)
-                        st.metric("Confidence", f"{score}/100")
-                        
+                    # 1. Header Section
+                    col_h1, col_h2, col_h3 = st.columns([2, 1, 1])
+                    with col_h1:
+                        st.markdown(f"### {color} ${m['symbol']}")
+                        trend_info = m.get('technical_summary', {})
+                        trend = trend_info.get('trend', 'N/A')
+                        trend_strength = trend_info.get('trend_strength', 'N/A')
+                        st.caption(f"Trend: {trend} ({trend_strength})")
+                    with col_h2:
+                        st.metric("Quant Score", f"{m.get('normalized_score', 'N/A')}/100")
+                    with col_h3:
+                        st.metric("Price", f"${m.get('current_price', 'N/A')}")
+                    
                     st.divider()
                     
-                    # Top Line Catalyst & Risk
+                    # 2. Factor Breakdown (5 columns)
+                    c_val, c_mom, c_qual, c_size, c_vol = st.columns(5)
+                    
+                    # Value Factor (max 15)
+                    with c_val:
+                        with st.container(border=True):
+                            value_data = m.get('value', {})
+                            val_score = value_data.get('score', 0)
+                            st.markdown("**Value**")
+                            st.markdown(f"{get_score_emoji(val_score, 15)} Score: {val_score}/15")
+                            st.caption(f"P/E: {value_data.get('pe_ratio') or 'N/A'}")
+                            st.caption(f"PEG: {value_data.get('peg_ratio') or 'N/A'}")
+                            st.caption(f"FCF Yield: {value_data.get('fcf_yield') or 'N/A'}%")
+                            st.caption(f"EV/EBITDA: {value_data.get('ev_ebitda') or 'N/A'}")
+                    
+                    # Momentum Factor (max 12)
+                    with c_mom:
+                        with st.container(border=True):
+                            mom_data = m.get('momentum', {})
+                            mom_score = mom_data.get('score', 0)
+                            st.markdown("**Momentum**")
+                            st.markdown(f"{get_score_emoji(mom_score, 12)} Score: {mom_score}/12")
+                            st.caption(f"RSI: {mom_data.get('rsi_14') or 'N/A'}")
+                            st.caption(f"MACD Hist: {mom_data.get('macd_histogram') or 'N/A'}")
+                            st.caption(f"vs SMA50: {mom_data.get('price_vs_sma50') or 'N/A'}")
+                            st.caption(f"vs 52w High: {mom_data.get('proximity_to_52w_high') or 'N/A'}")
+                    
+                    # Quality Factor (max 18)
+                    with c_qual:
+                        with st.container(border=True):
+                            qual_data = m.get('quality', {})
+                            qual_score = qual_data.get('score', 0)
+                            st.markdown("**Quality**")
+                            st.markdown(f"{get_score_emoji(qual_score, 18)} Score: {qual_score}/18")
+                            st.caption(f"ROE: {qual_data.get('roe') or 'N/A'}%")
+                            st.caption(f"ROIC: {qual_data.get('roic') or 'N/A'}%")
+                            st.caption(f"D/E: {qual_data.get('debt_to_equity') or 'N/A'}")
+                            st.caption(f"Op Margin: {qual_data.get('operating_margin') or 'N/A'}%")
+                    
+                    # Size Factor (max 5)
+                    with c_size:
+                        with st.container(border=True):
+                            size_data = m.get('size', {})
+                            size_score = size_data.get('score', 0)
+                            st.markdown("**Size**")
+                            st.markdown(f"{get_score_emoji(size_score, 5)} Score: {size_score}/5")
+                            st.caption(f"Category: {size_data.get('market_cap_category') or 'N/A'}")
+                            st.caption(f"Revenue Growth: {size_data.get('revenue_growth') or 'N/A'}%")
+                    
+                    # Volatility Factor (max 9)
+                    with c_vol:
+                        with st.container(border=True):
+                            vol_data = m.get('volatility', {})
+                            vol_score = vol_data.get('score', 0)
+                            st.markdown("**Volatility**")
+                            st.markdown(f"{get_score_emoji(vol_score, 9)} Score: {vol_score}/9")
+                            st.caption(f"Beta: {vol_data.get('beta') or 'N/A'}")
+                            st.caption(f"BB Width: {vol_data.get('bollinger_width') or 'N/A'}%")
+                            st.caption(f"Max DD: {vol_data.get('max_drawdown_1y') or 'N/A'}%")
+                    
+                    st.divider()
+                    
+                    # 3. Bottom Section: Risk-Adjusted & Technical Summary
+                    c_risk, c_tech = st.columns(2)
+                    
+                    with c_risk:
+                        st.markdown("**Risk-Adjusted Performance**")
+                        risk_data = m.get('risk_adjusted', {})
+                        st.caption(f"Sharpe Ratio: {risk_data.get('sharpe_ratio') or 'N/A'}")
+                        st.caption(f"Sortino Ratio: {risk_data.get('sortino_ratio') or 'N/A'}")
+                        st.caption(f"Calmar Ratio: {risk_data.get('calmar_ratio') or 'N/A'}")
+                    
+                    with c_tech:
+                        st.markdown("**Technical Summary**")
+                        tech_data = m.get('technical_summary', {})
+                        st.caption(f"Trend: {tech_data.get('trend') or 'N/A'}")
+                        st.caption(f"Strength: {tech_data.get('trend_strength') or 'N/A'}")
+                        vol_data = m.get('volatility', {})
+                        st.caption(f"Beta: {vol_data.get('beta') or 'N/A'}")
+                    
+                    st.divider()
+                    
+                    # Top Line Catalyst & Risk (from AI confidence)
                     col_catalyst, col_risk = st.columns(2)
                     with col_catalyst:
                         st.markdown(f"**🚀 Primary Catalyst:** {conf.get('primary_catalyst', 'N/A')}")
                     with col_risk:
                         st.markdown(f"**⚠️ Dealbreaker Risk:** {conf.get('dealbreaker_risk', 'None')}")
-                        
-                    st.divider()
-                    
-                    # THE DEEP DIVE EXPANDER
-                    with st.expander(" View Advanced Technical & Fundamental Analysis"):
-                        
-                        # 3-Column Grid for Core Data
-                        col_quant, col_fund, col_tech = st.columns(3)
-                        
-                        with col_quant:
-                            st.markdown("**📊 Valuation**")
-                            st.caption(f"Price: ${m['current_price']}")
-                            st.caption(f"P/E Ratio: {m['pe_ratio']}")
-                            st.caption(f"PEG Ratio: {m['peg_ratio']}")
-                            st.caption(f"Debt/Equity: {m['debt_to_equity']}")
-                            
-                        with col_fund:
-                            st.markdown("** Fundamentals**")
-                            st.caption(f"Free Cash Flow: {m['fcf']}")
-                            st.caption(f"Return on Equity: {m['roe']}")
-                            st.caption(f"Revenue Growth: {m['revenue_growth']}")
-                            st.caption(f"SEC Risk: {stock['sec_risks'][:100]}...")
-                            
-                        with col_tech:
-                            st.markdown("**📈 Technicals**")
-                            st.caption(f"Trend (50/200 SMA): {m['trend']}")
-                            st.caption(f"RSI (14): {m['rsi_14']}")
-                            st.caption(f"MACD Histogram: {m['macd_histogram']}")
-                            st.caption(f"Bollinger Width: {m['bb_width']}%")
 
         with tab2:
             st.subheader("Source Material")
